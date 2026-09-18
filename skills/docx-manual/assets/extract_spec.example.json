@@ -1,0 +1,31 @@
+{
+  "package": "Acme-後台操作說明-v2.docx",
+  "sources": {
+    "ops": "Acme-後台操作說明-v2.docx",
+    "scn": "Acme-情境手冊-v2.docx"
+  },
+  "title": "Acme 系統更新說明（v2.3）",
+  "templates": {
+    "h1": "Acme 後台操作說明",
+    "h2": "一、登入"
+  },
+  "fixes": [
+    ["詳見第三節與文末權限說明", "詳見下文各功能說明與權限角色說明"],
+    ["（見第 17 節）", "（見「退貨申請」）"]
+  ],
+  "figure_format": "圖 {n}：",
+  "parts": [
+    { "heading": [1, "Acme 系統更新說明（v2.3）"] },
+    { "para": "測試環境。介面為繁體中文。", "bold_prefix": "環境：" },
+    { "hr": true },
+    { "heading": [2, "更新總覽"] },
+    { "table": [["系統", "新增功能", "異動功能"],
+                ["訂單後台", "退貨申請審核", "首頁左側選單"]] },
+    { "pagebreak": true },
+    { "heading": [2, "壹、訂單後台"] },
+    { "range": { "from": "ops", "start": "[NEW 2.3] 左側選單新增", "end": "圖 2：" } },
+    { "one": { "from": "ops", "start": "功能選單", "after": "Acme 門市後台 操作說明" } },
+    { "figure": { "from": "ops", "caption": "圖 10-1：" } },
+    { "range": { "from": "scn", "start": "情境手冊：退貨申請", "end": "退款完成後" } }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "docx-manual-kit",
+  "description": "Marketplace for the docx-manual plugin: operation manuals as .docx with programmatic screenshots.",
+  "owner": { "name": "Dennis-LW" },
+  "plugins": [
+    {
+      "name": "docx-manual",
+      "description": "Build, patch and diff .docx operation manuals with programmatic screenshots (Markdown → docx via style template, in-place screenshot replacement, delta documents, Playwright / Flutter capture workflows).",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/Dennis-LW/docx-manual-kit"
+    }
+  ],
+  "metadata": {
+    "description": "Marketplace for the docx-manual plugin: operation manuals as .docx with programmatic screenshots.",
+    "version": "0.1.0"
+  }
+}

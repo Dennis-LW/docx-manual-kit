@@ -1,0 +1,9 @@
+{
+  "name": "docx-manual",
+  "description": "Produce and maintain customer-facing operation manuals as .docx with programmatic screenshots: build from Markdown using an existing .docx as style template, swap screenshots in place, renumber figures, assemble delta documents, and capture web (Playwright) / mobile (Flutter + adb) screenshots.",
+  "version": "0.1.0",
+  "author": { "name": "Dennis-LW" },
+  "homepage": "https://github.com/Dennis-LW/docx-manual-kit",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "docx", "manual", "documentation", "screenshots", "python-docx"]
+}
