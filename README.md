@@ -59,8 +59,8 @@ python skills/docx-manual/scripts/docx_inspect.py Manual.docx --figures
 
 # the order-confirmation dialog changed: replace the figures that show it
 python skills/docx-manual/scripts/docx_replace_images.py Manual.docx \
-  --set "caption:訂單已送出=shots/order_success_dialog.png" \
-  --set "caption:訂單已送出（左）#0=shots/order_success_dialog.png"
+  --set "caption:Order submitted=shots/order_success_dialog.png" \
+  --set "caption:Order list and detail#1=shots/order_detail.png"
 
 # build a new manual from Markdown, styled like the old one
 python skills/docx-manual/scripts/docx_build.py manual.md --template Manual.docx --out Manual-v2.docx --images-dir images
