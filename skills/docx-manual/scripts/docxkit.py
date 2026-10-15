@@ -565,21 +565,38 @@ class Importer:
 # figures
 # --------------------------------------------------------------------------
 
+def _fit_width_cm(path, max_w_cm, max_h_cm):
+    """Width (cm) that fits the image inside max_w x max_h, keeping aspect ratio."""
+    from PIL import Image
+    with Image.open(path) as im:
+        w, h = im.size
+    width = max_w_cm
+    if max_h_cm and h and width * h / w > max_h_cm:
+        width = max_h_cm * w / h
+    return width
+
+
 def add_figure(doc, image_path, caption, width_cm=None, caption_template=None,
-               side_by_side_paths=None):
+               side_by_side_paths=None, max_height_cm=None):
     """Append a centred picture paragraph plus its caption; return both elements.
 
     With `side_by_side_paths` (exactly two paths) both pictures go into the one
     centred paragraph at half width each, which is how manuals show a
     before/after or left/right pair under a single caption.
+
+    `width_cm` is the full-width budget (default 15 cm). `max_height_cm` caps
+    the rendered height, which is what keeps portrait phone screenshots from
+    running off an A4 page; a picture never exceeds either limit.
     """
     paths = list(side_by_side_paths) if side_by_side_paths else [image_path]
+    total = width_cm if width_cm else 15.0
     if len(paths) == 2:
-        total = width_cm if width_cm else 15.0
         each = (total - 0.3) / 2.0
-        widths = [Cm(each), Cm(each)]
+        widths = [Cm(_fit_width_cm(pth, each, max_height_cm)) for pth in paths]
+    elif width_cm or max_height_cm:
+        widths = [Cm(_fit_width_cm(paths[0], total, max_height_cm))]
     else:
-        widths = [Cm(width_cm) if width_cm else None]
+        widths = [None]
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER

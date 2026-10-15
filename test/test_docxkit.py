@@ -527,3 +527,68 @@ def test_extract_prunes_package_image_parts(tmp_path, built, messy_template):
     out = str(tmp_path / 'delta2.docx')
     docx_extract.main(['--spec', str(spec_path), '--out', out])
     assert len(media_names(out)) == 1
+
+
+# --------------------------------------------------------------------------
+# regressions from the first phone-app manual (38 portrait screenshots)
+# --------------------------------------------------------------------------
+
+def _extents(path):
+    """(cx, cy) in EMU of every picture, in document order."""
+    doc = docx.Document(path)
+    return [(int(e.get('cx')), int(e.get('cy')))
+            for e in doc.element.body.iter(qn('wp:extent'))]
+
+
+def test_build_default_size_fits_phone_screenshots(tmp_path, template, shots):
+    """Regression: without --width-cm a 1080px shot came out 28 cm wide."""
+    phone = make_png(str(tmp_path / 'images' / 'phone.png'), (1080, 2340), (1, 2, 3))
+    md = tmp_path / 'm.md'
+    md.write_text('# T\n\n![Phone](phone.png)\n\n![Login](login.png)\n', encoding='utf-8')
+    out = str(tmp_path / 'default.docx')
+    assert docx_build.main([str(md), '--template', template, '--out', out,
+                            '--images-dir', shots['dir']]) == 0
+    (cx, cy), (lx, ly) = _extents(out)
+    assert cy <= Cm(13) + 1 and cx <= Cm(15) + 1
+    assert abs(cy - Cm(13)) < Cm(0.05)                      # height is the binding limit
+    assert abs(cx / cy - 1080 / 2340) < 0.01                # aspect kept
+    assert abs(ly - Cm(13)) < Cm(0.05)                      # 400x700 also height-bound
+    _ = phone
+
+
+def test_build_width_zero_keeps_native_size(tmp_path, template, shots):
+    md = tmp_path / 'm.md'
+    md.write_text('# T\n\n![Login](login.png)\n', encoding='utf-8')
+    out = str(tmp_path / 'native.docx')
+    docx_build.main([str(md), '--template', template, '--out', out,
+                     '--images-dir', shots['dir'], '--width-cm', '0', '--max-height-cm', '0'])
+    (cx, cy), = _extents(out)
+    assert cy > Cm(13)                                      # 700 px at 96 dpi ≈ 18.5 cm
+
+
+def test_build_pair_caps_each_half(tmp_path, template, shots):
+    md = tmp_path / 'm.md'
+    md.write_text('# T\n\n![List](list.png) ![Detail](detail.png)\n', encoding='utf-8')
+    out = str(tmp_path / 'pair.docx')
+    docx_build.main([str(md), '--template', template, '--out', out,
+                     '--images-dir', shots['dir'], '--max-height-cm', '10'])
+    for cx, cy in _extents(out):
+        assert cy <= Cm(10) + 1 and cx <= Cm(7.35) + 1
+
+
+def test_build_pair_caption_ignores_second_alt_when_first_names_both(tmp_path, template, shots):
+    """Regression: `![A（左）與B（右）](a) ![B](b)` produced `A（左）與B（右）｜B`."""
+    md = tmp_path / 'm.md'
+    md.write_text('# T\n\n![清單（左）與明細（右）](list.png) ![明細](detail.png)\n\n'
+                  '![List (left) / Detail (right)](list.png) ![Detail](detail.png)\n\n'
+                  '![List](list.png) ![Detail](detail.png)\n', encoding='utf-8')
+    out = str(tmp_path / 'cap.docx')
+    docx_build.main([str(md), '--template', template, '--out', out,
+                     '--images-dir', shots['dir']])
+    caps = []
+    for f in figures(docx.Document(out)):
+        if f['caption'] not in caps:
+            caps.append(f['caption'])
+    assert caps == ['圖 1：清單（左）與明細（右）',
+                    '圖 2：List (left) / Detail (right)',
+                    '圖 3：List｜Detail']

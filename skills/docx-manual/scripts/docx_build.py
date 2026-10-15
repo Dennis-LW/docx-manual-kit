@@ -15,6 +15,8 @@ Supported Markdown subset::
     | a | b |               pipe table (first row = header)
     ![caption](shot.png)    figure with an auto-numbered caption
     ![a](x.png) ![b](y.png) two pictures side by side under one caption
+                            (caption "a｜b"; if a already says （左）/（右）
+                            the second alt is ignored, so write ![](y.png))
     > quoted text           body paragraph in italics
     ---                     horizontal rule
     <!-- pagebreak -->      page break
@@ -22,6 +24,11 @@ Supported Markdown subset::
 Relative image paths resolve against ``--images-dir`` first, then the directory
 of the Markdown file.  If any image is missing, nothing is written and every
 missing path is listed.
+
+Pictures are scaled to fit ``--width-cm`` x ``--max-height-cm`` (default
+15 x 13 cm, which fits an A4 text area with the caption) keeping their aspect
+ratio, so portrait phone screenshots no longer run off the page.  Pass 0 to
+either to lift that limit.
 
 Example::
 
@@ -155,14 +162,25 @@ def parse(md_text):
 # blocks → docx
 # --------------------------------------------------------------------------
 
+# A first alt that already says which picture is left and which is right.
+PAIR_PATTERN = re.compile(r'[（(]\s*(左|右|left|right)\s*[）)]', re.IGNORECASE)
+
+# Default picture budget: fits the text area of an A4 portrait page with room
+# for the caption. 1080x2340 phone screenshots land at 6 x 13 cm instead of
+# 28 cm wide; a 1600x1100 admin capture at 15 x 10.3 cm.
+DEFAULT_WIDTH_CM = 15.0
+DEFAULT_MAX_HEIGHT_CM = 13.0
+
+
 class Builder:
     """Renders parsed blocks into `doc` using cloned elements from `templates`."""
 
-    def __init__(self, doc, templates, width_cm=None, figure_format=FIGURE_FORMAT,
+    def __init__(self, doc, templates, width_cm=None, max_height_cm=None, figure_format=FIGURE_FORMAT,
                  break_before_h1=False):
         self.doc = doc
         self.t = templates
         self.width_cm = width_cm
+        self.max_height_cm = max_height_cm
         self.figure_format = figure_format
         self.break_before_h1 = break_before_h1
         self.figure_no = 0
@@ -251,12 +269,20 @@ class Builder:
     def figure(self, alts, paths):
         caption = self._caption(alts)
         add_figure(self.doc, paths[0], caption, width_cm=self.width_cm,
+                   max_height_cm=self.max_height_cm,
                    caption_template=self.t.caption,
                    side_by_side_paths=paths if len(paths) == 2 else None)
 
     def _caption(self, alts):
-        """Number the caption unless the alt text already carries a figure number."""
+        """Number the caption unless the alt text already carries a figure number.
+
+        For a left/right pair the first alt usually already names both pictures
+        (`訂單已送出（左）與訂單列表（右）`); when it does, the second alt is
+        ignored instead of being glued on as `…｜訂單列表`.
+        """
         alts = [a for a in alts if a]
+        if len(alts) == 2 and PAIR_PATTERN.search(alts[0]):
+            alts = alts[:1]
         if len(alts) == 2:
             alt = '%s｜%s' % (alts[0], alts[1])
         else:
@@ -328,7 +354,12 @@ def main(argv=None):
     ap.add_argument('--images-dir', help='directory searched first for relative images')
     ap.add_argument('--figure-format', default=FIGURE_FORMAT,
                     help="caption prefix format, default %r" % FIGURE_FORMAT)
-    ap.add_argument('--width-cm', type=float, help='displayed picture width in cm')
+    ap.add_argument('--width-cm', type=float, default=DEFAULT_WIDTH_CM,
+                    help='displayed picture width in cm (default %g; 0 = native pixel size, '
+                         'which overflows the page for phone screenshots)' % DEFAULT_WIDTH_CM)
+    ap.add_argument('--max-height-cm', type=float, default=DEFAULT_MAX_HEIGHT_CM,
+                    help='cap picture height in cm, keeping the aspect ratio (default %g; '
+                         '0 = no cap)' % DEFAULT_MAX_HEIGHT_CM)
     ap.add_argument('--break-before-h1', action='store_true',
                     help='start every H1 after the first on a new page')
     ap.add_argument('--style-map', metavar='JSON',
@@ -353,7 +384,8 @@ def main(argv=None):
         setattr(templates, field, copy.deepcopy(el) if el is not None else None)
     clear_body(doc)
 
-    b = Builder(doc, templates, width_cm=args.width_cm,
+    b = Builder(doc, templates, width_cm=args.width_cm or None,
+                max_height_cm=args.max_height_cm or None,
                 figure_format=args.figure_format,
                 break_before_h1=args.break_before_h1)
     b.run(blocks)
