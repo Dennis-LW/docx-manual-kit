@@ -31,6 +31,8 @@ Run the read-only checks for the workflow you picked before doing anything else,
 
 `shots_watch.sh` performs the adb check itself and exits 3 with a clear message; do not read its "locked device" exit 2 as an install problem or vice versa.
 
+Seeding demo data often means signing a JWT, reading a `.env`, or connecting to the test database directly. In Claude Code's auto mode those commands are blocked by the safety classifier (credential exploration, shared-resource modification), and retrying does not help. Tell the user which seed step needs credentials and ask them to run that step in a normal permission mode or by hand; do the shooting and the build in whichever mode they are in.
+
 Before any of them, read the writing rules in `references/writing-guide.md` once per project: they decide what to shoot (full page vs. cropped block), how captions are phrased, and which demo accounts and data must exist before shooting.
 
 ## A. Refresh screenshots in place
@@ -59,6 +61,11 @@ python scripts/docx_build.py manual.md --template client-template.docx --out Man
 
 Supported Markdown: `#`/`##`/`###` headings, paragraphs with `**bold**`/`*italic*`, bullet and numbered lists, pipe tables, `![caption](path)` figures (auto-numbered `圖 N：` - change with `--figure-format "Figure {n}: "`), two images on one line for a left/right pair sharing one caption, `---` horizontal rule, `<!-- pagebreak -->`, and `>` notes. See `assets/manual.example.md` for one of everything.
 
+Two details that bit on the first phone-app manual:
+
+- Pictures are scaled to fit `--width-cm` × `--max-height-cm` (default 15 × 13 cm, aspect kept), so a 1080 × 2340 phone screenshot lands at about 6 × 13 cm instead of 28 cm wide. Pass `--width-cm 0 --max-height-cm 0` only if the client wants native pixel sizes.
+- For a pair, write the whole caption in the first alt and leave the second empty: `![訂單已送出（左）與訂單列表（右）](a.png) ![](b.png)`. When the first alt already says （左）/（右）/(left)/(right) the second alt is ignored; otherwise the two alts are joined as `A｜B`.
+
 The template's body is cleared but its styles, numbering, headers/footers and page setup are kept, so the output looks like the client's document. If the template is a Google Docs export, headings may be wrapped in `w:sdt`; the scripts read text through `w:t` so that is transparent.
 
 Keep the Markdown in the project repo. Next sprint you edit the text, re-shoot the changed images with the same file names, and rebuild - nothing is hand-edited in Word.
@@ -80,7 +87,7 @@ Tag changed paragraphs in the full manuals with a stable marker (`v2.3 新增：
 Screenshots are the bulk of the work, so they are automated, repeatable, and driven by demo data you control.
 
 - **Web back-offices and member sites**: Playwright. Rules, viewport sizes and a skeleton script are in `references/web-screenshots.md` (`assets/web_shots.template.js`). Key rule: never take one giant `fullPage` capture of a long admin page; capture one viewport per logical section so figures stay legible on A4.
-- **Flutter / native mobile apps**: an integration test drives the app on a real device or emulator and prints a marker when a screen is ready; a host-side watcher (`scripts/shots_watch.sh`) takes a native screenshot at each marker so status bars and dialogs look exactly like production. Pattern, stubs and the pitfalls (secure-screen black frames, shimmer animations that hang `pumpAndSettle`, image pickers) are in `references/app-screenshots.md`; the Dart helpers to copy into the project are `assets/manual_shots_helpers.dart`.
+- **Flutter / native mobile apps**: an integration test drives the app on a real device or emulator and prints a marker when a screen is ready; a host-side watcher (`scripts/shots_watch.sh`) takes a native screenshot at each marker so status bars and dialogs look exactly like production. Pattern, stubs and the pitfalls (secure-screen black frames, shimmer animations that hang `pumpAndSettle`, image pickers, `enterText` appending on devices, account lockouts) are in `references/app-screenshots.md`; the Dart helpers to copy into the project are `assets/manual_shots_helpers.dart`, and `assets/manual_shots_android.sh` is the run script to copy into `tool/` (clean state, watcher, permission grants, `flutter drive`, cleanup).
 - Crop system bars only if the client wants it: `scripts/trim_screenshot.py`. Keep the untrimmed originals; manuals usually embed full screenshots at a fixed pixel size.
 
 Shooting writes real data in the test environment (bookings, submissions, generated codes). Say so in the report, and prefer dedicated demo accounts whose state you can reset via the backend API (many "state X" screens - pending review, expired plan - are reachable only by flipping a flag server-side, then flipping it back).
@@ -94,5 +101,5 @@ When the run touches a client file, the final message should say: which figures 
 - `references/from-spec.md` - starting with only a requirements spec: coverage map, Markdown skeleton, shot list and demo data before any shooting.
 - `references/writing-guide.md` - what to shoot, caption format, demo accounts, placeholders for pending figures. Read once per project.
 - `references/docx-internals.md` - the OOXML facts these scripts rely on; read before hand-editing XML or debugging a broken output.
-- `references/web-screenshots.md` - Playwright workflow.
-- `references/app-screenshots.md` - Flutter/adb workflow.
+- `references/web-screenshots.md` - Playwright workflow, including OAuth-login bypass by storage injection and forms that write data.
+- `references/app-screenshots.md` - Flutter/adb workflow and the real-device pitfalls.

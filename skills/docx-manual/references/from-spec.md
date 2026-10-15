@@ -58,7 +58,7 @@ Extract every `![…](file.png)` plus its `📸` note into `manuals/shots.md`:
 | app-07-checkout-blocked.png | App | 購物車 → 結帳 | customer account frozen | demo-customer-frozen | no |
 ```
 
-The "Required state" column is the expensive part and the reason to plan before shooting: every state needs an account or record that is in it, and a way to put it back. Create dedicated demo accounts (obvious names, complete profiles), seed the records, and write down the API call or admin action that flips each state both ways. Group rows by account and state so one login produces many shots; that grouping becomes the `SHOTS` array of the Playwright script or the `SHOT_SET`s of the Flutter test.
+Fill "Mutates data?" conservatively: a submit button whose client-side validation you have not read is "maybe", and the shot is taken without pressing it. The "Required state" column is the expensive part and the reason to plan before shooting: every state needs an account or record that is in it, and a way to put it back. Create dedicated demo accounts (obvious names, complete profiles), seed the records, and write down the API call or admin action that flips each state both ways. Group rows by account and state so one login produces many shots; that grouping becomes the `SHOTS` array of the Playwright script or the `SHOT_SET`s of the Flutter test.
 
 Show the coverage map, skeleton and shot list to the client or product owner before shooting. Changing a chapter title costs nothing here and a re-shoot later.
 

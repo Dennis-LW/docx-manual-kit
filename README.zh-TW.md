@@ -12,11 +12,11 @@
 | 就地換掉 .docx 內過時的截圖（自動備份、維持像素尺寸、驗證可開） | `docx_replace_images.py` |
 | 列出所有圖的圖說／尺寸／hash；比對兩個版本差異 | `docx_inspect.py`、`docx_figures_diff.py` |
 | 從既有手冊擷取段落組成「更新功能說明」差異文件 | `docx_extract.py` |
-| Flutter integration test ＋ adb 拍 APP 截圖 | `shots_watch.sh` ＋ `assets/manual_shots_helpers.dart` |
+| Flutter integration test ＋ adb 拍 APP 截圖 | `shots_watch.sh` ＋ `assets/manual_shots_helpers.dart` ＋ `assets/manual_shots_android.sh` |
 | Playwright 拍 Web 截圖 | `assets/web_shots.template.js` |
 | 裁掉系統列 | `trim_screenshot.py` |
 
-`skills/docx-manual/SKILL.md` 告訴 agent 該走哪條流程；references 說明 .docx 內部細節（Google Docs 匯出的 `w:sdt` 標題、media 名稱各檔獨立、跨文件搬 numbering／table style、清掉未引用圖片）與截圖的坑（FLAG_SECURE 黑圖、`pumpAndSettle` 卡死、鎖定畫面）。
+`skills/docx-manual/SKILL.md` 告訴 agent 該走哪條流程；references 說明 .docx 內部細節（Google Docs 匯出的 `w:sdt` 標題、media 名稱各檔獨立、跨文件搬 numbering／table style、清掉未引用圖片）與截圖的坑（FLAG_SECURE 黑圖、`pumpAndSettle` 卡死、鎖定畫面、實機 `enterText` 疊字、OAuth 登入）。
 
 ## 需求
 
@@ -62,6 +62,7 @@ python skills/docx-manual/scripts/docx_replace_images.py Manual.docx \
   --set "caption:訂單已送出=shots/order_success_dialog.png"
 
 # 從 Markdown 產新手冊，樣式沿用舊檔
+# （圖片預設縮到 15 × 13 cm 內，直式手機截圖不會爆版）
 python skills/docx-manual/scripts/docx_build.py manual.md --template Manual.docx --out Manual-v2.docx --images-dir images
 
 # 產出本次 release 的差異文件

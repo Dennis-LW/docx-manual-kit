@@ -9,6 +9,11 @@ const ACCOUNT = process.env.SHOT_ACCOUNT || 'admin';
 const PASSWORD = process.env.SHOT_PASSWORD || 'changeme';
 const OUT = process.env.SHOT_OUT || path.resolve('images');
 const MOBILE = process.env.SHOT_MOBILE === '1'; // member/consumer site → phone layout
+// Third-party login (LINE/Google OAuth) cannot be scripted: paste the persisted
+// auth store from a hand login into SHOT_SESSION_JSON ({"<localStorage key>": "<json string>"}).
+// Make sure it contains what the route guard checks (e.g. authStatus: 'authenticated'),
+// not only the token. See references/web-screenshots.md.
+const SESSION = process.env.SHOT_SESSION_JSON ? JSON.parse(process.env.SHOT_SESSION_JSON) : null;
 
 // One entry per figure. `steps` runs before the capture; `segments` captures a
 // long page one viewport at a time (see references/web-screenshots.md).
@@ -25,6 +30,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function settle(page, ms = 2000) {
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.waitForTimeout(ms);
+}
+
+async function injectStorage(context) {
+  if (!SESSION) return false;
+  await context.addInitScript((entries) => {
+    for (const [k, v] of entries) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+  }, Object.entries(SESSION));
+  return true;
 }
 
 async function login(page) {
@@ -63,12 +76,15 @@ async function capture(page, shot) {
       ? { viewport: { width: 414, height: 896 }, isMobile: true, deviceScaleFactor: 2, locale: 'zh-TW' }
       : { viewport: { width: 1600, height: 1100 }, deviceScaleFactor: 1, locale: 'zh-TW' },
   );
+  let loggedIn = await injectStorage(context);   // OAuth apps: session injected, no login form
   const page = await context.newPage();
-  let loggedIn = false;
   for (const shot of SHOTS) {
     if (!shot.beforeLogin && !loggedIn) { await login(page); loggedIn = true; }
     await page.goto(BASE + shot.url);
     await settle(page);
+    // steps: component-library checkboxes hide the real <input>; click the wrapper
+    // (page.locator('.el-checkbox').click()), never locator.check(). Do not press a
+    // submit button unless the client-side validation is known to block it.
     if (shot.steps) { await shot.steps(page); await settle(page, 1500); }
     await capture(page, shot);
   }

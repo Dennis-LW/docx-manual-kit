@@ -14,7 +14,10 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 const String kShotMark = '[shots]';
 
 /// Seconds a screen is held after the marker so the host has time to capture.
-const int kHoldSeconds = int.fromEnvironment('SHOT_HOLD', defaultValue: 5);
+/// 6 s is what a real device over USB needs: `adb exec-out screencap` takes
+/// 1-2 s itself and the watcher sleeps SHOT_DELAY first. Lower it only on an
+/// emulator, and never below 3.
+const int kHoldSeconds = int.fromEnvironment('SHOT_HOLD', defaultValue: 6);
 
 /// Background errors (image decode, network) must not fail a screenshot run.
 void drainErrors(WidgetTester tester) {
@@ -70,11 +73,63 @@ Future<void> waitUntilGone(
   debugPrint('$kShotMark WARN still present: ${what ?? finder.toString()}');
 }
 
+/// Hold the frame for real wall-clock time. On a device `tester.pump(d)`
+/// only advances the test clock and returns at once, so a loop of pumps
+/// finishes in milliseconds and the host screencap lands on the *next*
+/// screen (two "list" shots that both show the state after the toggle).
+/// The `Future.delayed` is what actually waits.
 Future<void> settle(WidgetTester tester, [int seconds = 3]) async {
   for (var i = 0; i < seconds * 4; i++) {
     await tester.pump(const Duration(milliseconds: 250));
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     drainErrors(tester);
   }
+}
+
+/// Type into a text field, replacing whatever is there.
+///
+/// On a real device `tester.enterText` *appends* to the field's current
+/// value (the IME keeps its composing state), so a second login attempt
+/// sends "passwordpassword" and a few of those lock the account for 15
+/// minutes. Tap first, clear through the controller when there is one, then
+/// enter the text, and print the resulting length so the log shows what was
+/// really submitted (never the text itself).
+Future<void> type(WidgetTester tester, Finder field, String text,
+    {String? what}) async {
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pump(const Duration(milliseconds: 300));
+  final widget = field.evaluate().single.widget;
+  final controller = widget is TextField
+      ? widget.controller
+      : widget is TextFormField
+          ? widget.controller
+          : null;
+  controller?.clear();
+  await tester.enterText(field, text);
+  await tester.pump(const Duration(milliseconds: 300));
+  final len = controller?.text.length ?? -1;
+  debugPrint('$kShotMark typed ${what ?? field.toString()} '
+      '(${text.length} chars, field now $len)');
+  if (len >= 0 && len != text.length) {
+    fail('${what ?? field} holds $len chars after typing ${text.length}; '
+        'enterText appended instead of replacing');
+  }
+}
+
+/// Tap a widget by its text when the same text may appear more than once.
+///
+/// After typing a name into a search box, `find.text(name).first` hits the
+/// search box, not the result card, so take the last match by default. Items
+/// of a lazy ListView that are off-screen are found by `find.text` but not
+/// hit-testable; `ensureVisible` scrolls them in first.
+Future<void> tapText(WidgetTester tester, String text,
+    {bool last = true}) async {
+  final f = last ? find.text(text).last : find.text(text).first;
+  await tester.ensureVisible(f);
+  await tester.pump(const Duration(milliseconds: 200));
+  await tester.tap(f);
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 String _flat(String s) => s.replaceAll('\n', ' ').trim();

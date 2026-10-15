@@ -12,11 +12,11 @@ Manuals are re-issued every time the UI changes. The expensive parts are capturi
 | Swap outdated screenshots inside a .docx in place (backup, same pixel size, verified) | `docx_replace_images.py` |
 | List every figure with its caption / size / hash; diff two versions | `docx_inspect.py`, `docx_figures_diff.py` |
 | Assemble a "what changed" delta document from sections of existing manuals | `docx_extract.py` |
-| Capture app screenshots from a Flutter integration test via adb | `shots_watch.sh` + `assets/manual_shots_helpers.dart` |
+| Capture app screenshots from a Flutter integration test via adb | `shots_watch.sh` + `assets/manual_shots_helpers.dart` + `assets/manual_shots_android.sh` |
 | Capture web screenshots with Playwright | `assets/web_shots.template.js` |
 | Crop system bars | `trim_screenshot.py` |
 
-The skill file (`skills/docx-manual/SKILL.md`) tells the agent which workflow applies and the references explain the .docx internals (Google Docs `w:sdt` headings, per-file media names, cross-document numbering/style import, orphan image pruning) and the screenshot pitfalls (secure-screen black frames, `pumpAndSettle` hangs, lock screens).
+The skill file (`skills/docx-manual/SKILL.md`) tells the agent which workflow applies and the references explain the .docx internals (Google Docs `w:sdt` headings, per-file media names, cross-document numbering/style import, orphan image pruning) and the screenshot pitfalls (secure-screen black frames, `pumpAndSettle` hangs, lock screens, `enterText` appending on real devices, OAuth logins).
 
 ## Requirements
 
@@ -63,6 +63,7 @@ python skills/docx-manual/scripts/docx_replace_images.py Manual.docx \
   --set "caption:Order list and detail#1=shots/order_detail.png"
 
 # build a new manual from Markdown, styled like the old one
+# (pictures fit 15 x 13 cm by default, so portrait phone screenshots stay on the page)
 python skills/docx-manual/scripts/docx_build.py manual.md --template Manual.docx --out Manual-v2.docx --images-dir images
 
 # delta document for a release
